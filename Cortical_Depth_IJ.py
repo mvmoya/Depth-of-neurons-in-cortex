@@ -21,6 +21,10 @@ from ij import IJ
 import ij.gui as gui
 
 def Get_Line_Info(line):
+	
+	## Gets all parameters associated with an ROI line
+	## Unpacks them and returns them for later use
+	
 	angle = line.getAngle()
 	xbase = line.getXBase()
 	ybase = -line.getYBase()
@@ -30,53 +34,74 @@ def Get_Line_Info(line):
 	if angle < 0:
 		xend = xbase + width
 		yend = ybase - height
-		slope = -(height/width)
+		slope = -(height / width)
 	else:	
 		ybase = ybase - height
 		xend = xbase + width
 		yend = -line.getYBase()
-		slope = (height/width)
+		slope = (height / width)
 
-	return (angle, xbase, ybase, width, height, xend, yend, slope)
+	return(angle, xbase, ybase, width, 
+	       height, xend, yend, slope)
 
 def Perpendicular_line(imp, line_info):
+	
+	## Calculates the parameters for a line that is
+	## perpendicular to an ROI line. This is the line
+	## that acts as the depth reference.
+	
 	angle, xbase, ybase, width, height, xend, yend, slope = line_info
 	
 	width, height, nChannels, nSlices, nFrames = imp.getDimensions()
+	
 	b = ybase - (slope*xbase)
 	perp_angle = math.toRadians(angle - 90)
 	slope_new_line = math.tan(perp_angle)
 			
-	return slope_new_line, b
+	return(slope_new_line, b)
 
 def Distance_point_to_line(line_info, new_slope, b, cell_points):
+	
+	## This function calculates the euclidean distance of an
+	## ROI point to an ROI line. Returns the distance value.
+	
 	angle, xbase, ybase, width, height, xend, yend, slope = line_info
 	cell_distance = []
+	
 	for index in range(len(cell_points)):
 		x_coor, y_coor = cell_points[index]
 		y_coor = -y_coor
-		b_new_line = y_coor - (new_slope*x_coor)
-		x_intercept = (b - b_new_line)/(new_slope - slope)
-		y_intercept = (new_slope*x_intercept + b_new_line)
-		#print(b_new_line, x_intercept, y_intercept)
-		distance = ((x_intercept- x_coor)**2 + (y_intercept - y_coor)**2)**0.5
+		b_new_line = y_coor - (new_slope * x_coor)
+		
+		x_intercept = (b - b_new_line) / (new_slope - slope)
+		y_intercept = (new_slope * x_intercept + b_new_line)
+		
+		distance = ((x_intercept- x_coor)**2 
+			    + (y_intercept - y_coor)**2)**0.5
+		
 		cell_distance.append(distance)
 
-	return cell_distance
+	return(cell_distance)
 
 def Generate_table(table, cell_distance_pia, cell_distance_wm, cell_points):
 	
+	## Creates table with output data that is popped up at the end
+	## of analysis. Does not return value. Just shows table.
+	
 	for i in range(len(cell_distance_pia)):
 		xcoor, ycoor = cell_points[i]
+		
 		table.incrementCounter()
 		table.addValue("Cell number", "Cell # " + str(i + 1))
 		table.addValue("X coordinate", xcoor)
 		table.addValue("Y coordinate", ycoor)
 		table.addValue("Distance from Pia", cell_distance_pia[i])
 		table.addValue("Distance from WM", cell_distance_wm[i])
+		
 		pia = cell_distance_pia[i]
 		wm = cell_distance_wm[i]
-		percent_distance = (pia/(wm + pia))*100
+		percent_distance = (pia/(wm + pia)) * 100
+		
 		table_data.addValue("Percent depth from Pia", percent_distance)
 				
 	table_data.show("Results in Pixels")
